@@ -142,6 +142,10 @@ const config = {
         "fromEnvVar": null,
         "value": "windows",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "rhel-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
@@ -159,6 +163,7 @@ const config = {
     "db"
   ],
   "activeProvider": "mongodb",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -167,8 +172,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider   = \"prisma-client-js\"\n  engineType = \"binary\"\n  output     = \"./generated/main\"\n}\n\ndatasource db {\n  provider = \"mongodb\"\n  url      = \"mongodb+srv://bishan:bBZZnbX3bBaEJ5bZ@learning.i40bkxc.mongodb.net/auth\"\n}\n\nmodel User {\n  id         String   @id @default(auto()) @map(\"_id\") @db.ObjectId\n  email      String   @unique\n  password   String\n  name       String?\n  isVerified Boolean  @default(false)\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @updatedAt\n  tokens     Token[]\n}\n\nmodel Token {\n  id        String   @id @default(auto()) @map(\"_id\") @db.ObjectId\n  token     String   @unique\n  type      String\n  expiresAt DateTime\n  createdAt DateTime @default(now())\n  userId    String   @db.ObjectId\n  user      User     @relation(fields: [userId], references: [id])\n}\n",
-  "inlineSchemaHash": "7f01645b5017e8f499fe2a9034126884815da4f043d8ab1e0f0ddd00ea547521",
+  "inlineSchema": "generator client {\n  provider      = \"prisma-client-js\"\n  engineType    = \"binary\"\n  output        = \"./generated/main\"\n  binaryTargets = [\"native\", \"rhel-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"mongodb\"\n  url      = \"mongodb+srv://bishan:bBZZnbX3bBaEJ5bZ@learning.i40bkxc.mongodb.net/auth\"\n}\n\nmodel User {\n  id         String   @id @default(auto()) @map(\"_id\") @db.ObjectId\n  email      String   @unique\n  password   String\n  name       String?\n  isVerified Boolean  @default(false)\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @updatedAt\n  tokens     Token[]\n}\n\nmodel Token {\n  id        String   @id @default(auto()) @map(\"_id\") @db.ObjectId\n  token     String   @unique\n  type      String\n  expiresAt DateTime\n  createdAt DateTime @default(now())\n  userId    String   @db.ObjectId\n  user      User     @relation(fields: [userId], references: [id])\n}\n",
+  "inlineSchemaHash": "9812f9dcdb02aa6f416f201e60f3289333a220c53e52ce55ed1b83f423ebb815",
   "copyEngine": true
 }
 config.dirname = '/'
