@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMe = exports.resetPassword = exports.forgotPassword = exports.login = exports.register = void 0;
+exports.changePassword = exports.verifyEmail = exports.getMe = exports.resetPassword = exports.forgotPasswordz = exports.login = exports.register = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const prisma_1 = require("../utils/prisma");
@@ -32,7 +32,21 @@ const register = async (req, res) => {
                 name,
             },
         });
-        res.status(201).json({ message: 'User created successfully', user: { id: user.id, email: user.email, name: user.name } });
+        // Generate verification token
+        const token = generateToken();
+        await prisma_1.prisma.token.create({
+            data: {
+                token,
+                type: 'EMAIL_VERIFICATION',
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+                userId: user.id
+            }
+        });
+        await (0, emailService_1.sendVerificationEmail)(user.email, token);
+        res.status(201).json({
+            message: 'User created successfully. Please check your email to verify your account.',
+            user: { id: user.id, email: user.email, name: user.name }
+        });
     }
     catch (error) {
         console.error(error);
@@ -53,6 +67,21 @@ const login = async (req, res) => {
             res.status(400).json({ message: 'Invalid credentials' });
             return;
         }
+        if (!user.isVerified) {
+            // Generate new verification token
+            const verificationToken = generateToken();
+            await prisma_1.prisma.token.create({
+                data: {
+                    token: verificationToken,
+                    type: 'EMAIL_VERIFICATION',
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+                    userId: user.id
+                }
+            });
+            await (0, emailService_1.sendVerificationEmail)(user.email, verificationToken);
+            res.status(403).json({ message: 'Account not verified. A new verification email has been sent.' });
+            return;
+        }
         const isPasswordValid = await bcryptjs_1.default.compare(password, user.password);
         if (!isPasswordValid) {
             res.status(400).json({ message: 'Invalid credentials' });
@@ -70,7 +99,7 @@ exports.login = login;
 function generateToken(length = 40) {
     return crypto_1.default.randomBytes(length).toString('hex');
 }
-const forgotPassword = async (req, res) => {
+const forgotPasswordz = async (req, res) => {
     try {
         const { error } = authValidation_1.forgotPasswordSchema.validate(req.body || {});
         if (error) {
@@ -81,12 +110,13 @@ const forgotPassword = async (req, res) => {
         const user = await prisma_1.prisma.user.findUnique({ where: { email } });
         if (!user) {
             // Security best practice: Don't reveal if user exists
-            res.status(200).json({ message: 'If a user with this email exists, a password reset link has been sent.' });
+            res.status(200).json({ message: 'No user found with this email.' });
             return;
         }
         const token = generateToken();
         const expiresAt = new Date(Date.now() + 1000 * 60 * 60); // 1 hour expiry
         // Save token to database
+        console.log("hiiii");
         await prisma_1.prisma.token.create({
             data: {
                 token,
@@ -104,7 +134,7 @@ const forgotPassword = async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 };
-exports.forgotPassword = forgotPassword;
+exports.forgotPasswordz = forgotPasswordz;
 const resetPassword = async (req, res) => {
     try {
         const { error } = authValidation_1.resetPasswordSchema.validate(req.body || {});
@@ -164,3 +194,66 @@ const getMe = async (req, res) => {
     }
 };
 exports.getMe = getMe;
+const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.query;
+        if (!token || typeof token !== 'string') {
+            res.status(400).json({ message: 'Invalid token' });
+            return;
+        }
+        const dbToken = await prisma_1.prisma.token.findUnique({
+            where: { token },
+        });
+        if (!dbToken || dbToken.type !== 'EMAIL_VERIFICATION' || dbToken.expiresAt < new Date()) {
+            res.status(400).json({ message: 'Invalid or expired token' });
+            return;
+        }
+        await prisma_1.prisma.user.update({
+            where: { id: dbToken.userId },
+            data: { isVerified: true },
+        });
+        await prisma_1.prisma.token.delete({ where: { id: dbToken.id } });
+        res.status(200).json({ message: 'Email verified successfully. You can now login.' });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+exports.verifyEmail = verifyEmail;
+const changePassword = async (req, res) => {
+    try {
+        const { error } = authValidation_1.changePasswordSchema.validate(req.body || {});
+        if (error) {
+            res.status(400).json({ message: error.details[0].message });
+            return;
+        }
+        const userId = req.user?.userId;
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+        const { oldPassword, newPassword } = req.body;
+        const user = await prisma_1.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+        const isPasswordValid = await bcryptjs_1.default.compare(oldPassword, user.password);
+        if (!isPasswordValid) {
+            res.status(400).json({ message: 'Invalid old password' });
+            return;
+        }
+        const hashedPassword = await bcryptjs_1.default.hash(newPassword, 10);
+        await prisma_1.prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword },
+        });
+        res.status(200).json({ message: 'Password changed successfully' });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+exports.changePassword = changePassword;

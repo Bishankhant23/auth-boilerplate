@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendResetPasswordEmail = void 0;
+exports.sendVerificationEmail = exports.sendResetPasswordEmail = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const transporter = nodemailer_1.default.createTransport({
     host: process.env.SMTP_HOST,
@@ -15,7 +15,7 @@ const transporter = nodemailer_1.default.createTransport({
     },
 });
 const sendResetPasswordEmail = async (to, token) => {
-    const resetLink = `http://localhost:3000/reset-password?token=${token}`; // Adjust frontend URL as needed
+    const resetLink = `${process.env.API_URL}/reset-password?token=${token}`; // Adjust frontend URL as needed
     const mailOptions = {
         from: process.env.FROM_EMAIL || '"Auth System" <no-reply@example.com>',
         to,
@@ -38,3 +38,27 @@ const sendResetPasswordEmail = async (to, token) => {
     }
 };
 exports.sendResetPasswordEmail = sendResetPasswordEmail;
+const sendVerificationEmail = async (to, token) => {
+    const verificationLink = `${process.env.API_URL}/api/auth/verify-email?token=${token}`; // Using API link directly for now or frontend
+    const mailOptions = {
+        from: process.env.FROM_EMAIL || '"Auth System" <no-reply@example.com>',
+        to,
+        subject: 'Verify Your Email',
+        html: `
+            <p>Welcome!</p>
+            <p>Please click this link to verify your email address:</p>
+            <a href="${verificationLink}">${verificationLink}</a>
+            <p>This link will expire in 24 hours.</p>
+        `,
+    };
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Verification email sent: %s', info.messageId);
+        return info;
+    }
+    catch (error) {
+        console.error('Error sending verification email:', error);
+        throw error;
+    }
+};
+exports.sendVerificationEmail = sendVerificationEmail;
