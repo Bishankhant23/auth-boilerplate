@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.newnavigation",
+      "sha256_cert_fingerprints": [
+        "4C:E7:1A:FF:D1:94:F4:4F:09:6F:AB:BB:4C:DB:0A:26:32:BC:BC:9E:C7:EA:A3:88:FD:31:46:74:AC:15:7B:CD"
+      ]
+    }
+  }
+]

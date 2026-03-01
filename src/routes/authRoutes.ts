@@ -17,7 +17,7 @@ router.get("/reset-password", (req, res) => {
     <html>
       <body>
         Opening app...
-
+            
         <script>
           window.location.href =
             "myapp://reset-password?token=${token}";
