@@ -11,6 +11,21 @@ router.post('/reset-password', resetPassword);
 router.get('/me', authenticateToken, getMe);
 router.get('/verify-email', verifyEmail);
 router.post('/change-password', authenticateToken, changePassword);
+router.get("/reset-password", (req, res) => {
+  const { token } = req.query;
+  res.send(`
+    <html>
+      <body>
+        Opening app...
+
+        <script>
+          window.location.href =
+            "myapp://reset-password?token=${token}";
+        </script>
+      </body>
+    </html>
+  `);
+});
 
 
 export default router;
